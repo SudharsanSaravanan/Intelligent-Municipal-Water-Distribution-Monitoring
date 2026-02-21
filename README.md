@@ -122,22 +122,22 @@ Intelligent-Municipal-Water-Distribution-Monitoring/
 ┌─────────────────────────────────────────────────────────────────────┐
 │                        EMBEDDED LAYER                               │
 │                                                                     │
-│  ┌─────────────────────┐         ┌─────────────────────────────┐   │
-│  │  SUB TANK (Slave)   │         │    MAIN TANK (Master)       │   │
-│  │  ─────────────────  │ ESP-NOW │  ──────────────────────── ─ │   │
-│  │  • Flow Sensor 1&2  │ ──────► │  • TDS (GPIO 34)            │   │
-│  │  • TDS (GPIO 34)    │         │  • Ultrasonic (GPIO 26/27)  │   │
-│  │  • Ultrasonic       │         │  • Receives slave payload   │   │
-│  │  • Relay 1&2        │         │  • Uploads to Firebase RTDB │   │
-│  └─────────────────────┘         └──────────────┬──────────────┘   │
+│  ┌─────────────────────┐         ┌─────────────────────────────┐    │
+│  │  SUB TANK (Slave)   │         │    MAIN TANK (Master)       │    │
+│  │  ─────────────────  │ ESP-NOW │  ──────────────────────── ─ │    │
+│  │  • Flow Sensor 1&2  │ ──────► │  • TDS (GPIO 34)            │    │
+│  │  • TDS (GPIO 34)    │         │  • Ultrasonic (GPIO 26/27)  │    │
+│  │  • Ultrasonic       │         │  • Receives slave payload   │    │
+│  │  • Relay 1&2        │         │  • Uploads to Firebase RTDB │    │
+│  └─────────────────────┘         └──────────────┬──────────────┘    │
 └─────────────────────────────────────────────────┼───────────────────┘
                                                   │ HTTPS PUT
                                                   ▼
 ┌─────────────────────────────────────────────────────────────────────┐
 │                       CLOUD LAYER (Firebase RTDB)                   │
 │                                                                     │
-│   /waterSystem/status/master  →  { tdsPpm, waterQuality,           │
-│   /waterSystem/status/slave      tankLevelPercent, tankLevelCm,    │
+│   /waterSystem/status/master  →  { tdsPpm, waterQuality,            │
+│   /waterSystem/status/slave      tankLevelPercent, tankLevelCm,     │
 │   /waterSystem/history/*         flow1_Lmin, flow2_Lmin }           │
 │   /waterSystem/alerts            (updated every 5 seconds)          │
 └─────────────────────────────────────────────────┬───────────────────┘
@@ -146,25 +146,25 @@ Intelligent-Municipal-Water-Distribution-Monitoring/
 ┌─────────────────────────────────────────────────────────────────────┐
 │                       SERVER LAYER (Node.js)                        │
 │                                                                     │
-│   server.js  ┌─────────────────┐  ┌──────────────────────────┐    │
-│   ──────────►│ Firebase        │  │ local_cache.json          │    │
-│              │ .on("value")    │─►│ (offline persistence)     │    │
-│              └────────┬────────┘  └──────────────────────────┘    │
+│   server.js  ┌─────────────────┐  ┌──────────────────────────┐      │
+│   ──────────►│ Firebase        │  │ local_cache.json         │      │
+│              │ .on("value")    │─►│ (offline persistence)    │      │
+│              └────────┬────────┘  └──────────────────────────┘      │
 │                       │                                             │
-│              ┌────────▼────────┐  ┌──────────────────────────┐    │
-│              │ REST API        │  │ Socket.IO WebSocket       │    │
-│              │ /api/telemetry  │  │ → master_update           │    │
-│              │ /health         │  │ → slave_update            │    │
-│              └─────────────────┘  │ → alert                   │    │
-│                                   └──────────────────────────┘    │
+│              ┌────────▼────────┐  ┌──────────────────────────┐      │
+│              │ REST API        │  │ Socket.IO WebSocket      │      │
+│              │ /api/telemetry  │  │ → master_update          │      │
+│              │ /health         │  │ → slave_update           │      │
+│              └─────────────────┘  │ → alert                  │      │
+│                                   └──────────────────────────┘      │
 └─────────────────────────────────────────────────┬───────────────────┘
                                                   │ HTTP + WebSocket
                                                   ▼
 ┌─────────────────────────────────────────────────────────────────────┐
 │                     DASHBOARD LAYER (Browser)                       │
 │                                                                     │
-│   KPI Cards · Animated Tanks · TDS Quality · Flow Rates            │
-│   Chart.js History · Alert Panel · Socket.IO Live Updates          │
+│   KPI Cards · Animated Tanks · TDS Quality · Flow Rates             │
+│   Chart.js History · Alert Panel · Socket.IO Live Updates           │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
