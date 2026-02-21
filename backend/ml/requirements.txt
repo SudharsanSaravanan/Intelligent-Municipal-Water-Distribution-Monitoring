@@ -1,0 +1,19 @@
+# ═══════════════════════════════════════════════════════════════
+# HydroNet ML Pipeline — Python Dependencies
+# ═══════════════════════════════════════════════════════════════
+# Install: pip install -r requirements.txt
+
+# Core ML
+scikit-learn>=1.3.0
+pandas>=2.0.0
+numpy>=1.24.0
+joblib>=1.3.0
+
+# ML Microservice (HTTP bridge to Node.js backend)
+flask>=3.0.0
+
+# MQTT client for valve control commands via LoRa gateway
+paho-mqtt>=1.6.0
+
+# Firebase Admin SDK for training data access
+firebase-admin>=6.0.0

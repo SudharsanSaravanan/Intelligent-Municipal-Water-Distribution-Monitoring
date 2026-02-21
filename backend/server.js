@@ -17,6 +17,36 @@ const { db } = require("./firebase");
 const telemetryRoutes = require("./api/telemetry.routes");
 const { readCache, writeCache } = require("./database/cache.helper");
 
+// ── ML Pipeline Bridge (Python microservice on port 5050) ─────
+const ML_SERVICE_URL = process.env.ML_SERVICE_URL || "http://localhost:5050";
+async function forwardToMLPipeline(telemetryData) {
+    try {
+        const resp = await fetch(`${ML_SERVICE_URL}/process`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(telemetryData),
+            signal: AbortSignal.timeout(5000), // 5s timeout
+        });
+        const result = await resp.json();
+        if (result.status === "processed" && result.decision) {
+            const d = result.decision;
+            console.log(`[ML] State: ${d.state} | Raw: ${d.raw_score} | EMA: ${d.ema_score}`);
+            // Broadcast ML decision to connected dashboards
+            io.emit("ml_decision", { ...d, timestamp: new Date().toISOString() });
+            if (d.state === "ANOMALY_CONFIRMED") {
+                console.warn(`[ML] ⚠️  ANOMALY CONFIRMED — valve throttle published`);
+                await raiseAlert("ML_PIPELINE", "ANOMALY_DETECTED",
+                    `ML anomaly confirmed (score: ${d.ema_score})`, "critical");
+            }
+        }
+    } catch (err) {
+        // ML service down — log but don't break existing flow
+        if (err.name !== "TimeoutError") {
+            console.warn(`[ML] Pipeline unreachable: ${err.message}`);
+        }
+    }
+}
+
 // ── Express + WebSocket ───────────────────────────────────────
 const app = express();
 const server = http.createServer(app);
@@ -116,6 +146,11 @@ db.ref("/waterSystem/status").on("value", async (snapshot) => {
 
         io.emit("slave_update", { ...s, timestamp: ts });
         db.ref("/waterSystem/history/slave").push({ ...s, timestamp: ts });
+
+        // ── Forward telemetry to ML Pipeline for anomaly detection ─
+        // The slave node has flow sensors — critical for leak detection.
+        // This is non-blocking: if ML service is down, the rest continues.
+        forwardToMLPipeline({ ...s, timestamp: ts });
 
         if (s.tankLevelPercent !== undefined && s.tankLevelPercent >= 0 && s.tankLevelPercent <= 20) {
             await raiseAlert("SLAVE", "LOW_LEVEL",
