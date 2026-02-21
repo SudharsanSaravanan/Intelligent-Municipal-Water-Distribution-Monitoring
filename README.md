@@ -17,10 +17,11 @@
 5. [Firebase Setup](#-firebase-setup)
 6. [Firmware Setup (ESP32)](#-firmware-setup-esp32)
 7. [Backend Setup (Node.js)](#-backend-setup-nodejs)
-8. [Frontend Setup (Dashboard)](#-frontend-setup-dashboard)
-9. [REST API Reference](#-rest-api-reference)
-10. [Real-Time Events](#-real-time-events-socketio)
-11. [Environment Variables](#-environment-variables)
+8. [ML Pipeline Setup (Python)](#-ml-pipeline-setup-python)
+9. [Frontend Setup (Dashboard)](#-frontend-setup-dashboard)
+10. [REST API Reference](#-rest-api-reference)
+11. [Real-Time Events](#-real-time-events-socketio)
+12. [Environment Variables](#-environment-variables)
 
 ---
 
@@ -67,6 +68,21 @@ Intelligent-Municipal-Water-Distribution-Monitoring/
 │   │   └── cache.helper.js            # Cache read/write helpers
 │   ├── api/
 │   │   └── telemetry.routes.js        # REST API endpoints
+│   ├── ml/                            # ── ML ANOMALY DETECTION PIPELINE ────
+│   │   ├── config.py                  # Hyperparameters & thresholds
+│   │   ├── preprocessing.py           # Filtering, outlier removal, scaling
+│   │   ├── feature_engineering.py     # 9 domain-specific feature extraction
+│   │   ├── windowing.py               # Time-based sliding window processor
+│   │   ├── model.py                   # Isolation Forest wrapper
+│   │   ├── train.py                   # Training from Firebase history
+│   │   ├── inference.py               # Real-time inference engine
+│   │   ├── ema.py                     # EMA score smoother
+│   │   ├── control_logic.py           # Sustained anomaly state machine
+│   │   ├── pipeline.py                # MQTT-to-ML connector
+│   │   ├── ml_service.py              # Flask microservice (Node.js bridge)
+│   │   ├── utils.py                   # Logging & helpers
+│   │   ├── requirements.txt           # Python dependencies
+│   │   └── saved/                     # Trained model & scaler artifacts
 │   ├── .env                           # Your environment variables (git-ignored)
 │   ├── .env.example                   # Template — copy to .env
 │   ├── serviceAccountKey.json         # Firebase service account (git-ignored)
@@ -312,6 +328,54 @@ Expected response:
 
 ---
 
+## 🤖 ML Pipeline Setup (Python)
+
+The system includes an **Isolation Forest**-based anomaly detection pipeline that runs as a Python microservice alongside the Node.js backend.
+
+### Pipeline Overview
+
+```
+Telemetry → Sliding Window (5 min) → Feature Extraction (9 features)
+  → StandardScaler → Isolation Forest → EMA Smoothing → Sustained Anomaly Logic
+  → Control Decision (NORMAL / WARNING / ANOMALY_CONFIRMED)
+```
+
+| Stage | Module | Purpose |
+|---|---|---|
+| Filtering | `preprocessing.py` | Remove missing values & IQR outliers |
+| Windowing | `windowing.py` | Time-based sliding window (300s) |
+| Feature Extraction | `feature_engineering.py` | 9 features: flow stats, tank gradients, TDS variation, temporal |
+| Normalization | `preprocessing.py` | StandardScaler (zero-mean, unit-variance) |
+| Model | `model.py` | Isolation Forest with 0–1 normalized anomaly scores |
+| Smoothing | `ema.py` | EMA (α=0.3) prevents false valve actuation |
+| Control Logic | `control_logic.py` | 3 consecutive anomalous windows (15 min) required to confirm |
+
+### Setup
+
+```bash
+cd backend/ml
+pip install -r requirements.txt
+```
+
+### Train the Model
+
+```bash
+python -m backend.ml.train
+```
+
+This fetches historical data from Firebase, creates time windows, extracts features, and saves the trained model and scaler to `backend/ml/saved/`.
+
+### Start the ML Service
+
+```bash
+python backend/ml/ml_service.py
+# Runs on port 5050 (configurable via ML_SERVICE_PORT)
+```
+
+The Node.js backend automatically forwards incoming telemetry to this service for real-time inference. If the ML service is unavailable, the existing backend continues to operate normally.
+
+---
+
 ## Frontend Setup (Dashboard)
 
 The frontend is a **static HTML/CSS/JS** application — no build step required.
@@ -395,6 +459,7 @@ Connect to: `ws://localhost:3000`
 | `initial_state` | Server → Client | Full cached state on new connection |
 | `master_update` | Server → Client | `{ tdsPpm, waterQuality, tankLevelPercent, tankLevelCm, timestamp }` |
 | `slave_update` | Server → Client | `{ flow1_Lmin, flow2_Lmin, tdsPpm, waterQuality, waterQualityCode, tankLevelPercent, tankLevelCm, timestamp }` |
+| `ml_decision` | Server → Client | `{ state, raw_score, ema_score, window_size, features, timestamp }` |
 | `alert` | Server → Client | `{ nodeId, type, message, level, timestamp }` |
 
 ---
@@ -407,6 +472,11 @@ Connect to: `ws://localhost:3000`
 | `FIREBASE_DATABASE_URL` | — | Your Firebase RTDB URL |
 | `FIREBASE_KEY_PATH` | `./serviceAccountKey.json` | Path to service account key |
 | `CORS_ORIGIN` | `http://localhost:5500` | Allowed frontend origin |
+| `ML_SERVICE_URL` | `http://localhost:5050` | Python ML microservice URL |
+| `ML_SERVICE_PORT` | `5050` | ML service listen port |
+| `ML_LOG_LEVEL` | `INFO` | ML pipeline log level |
+| `MQTT_BROKER_HOST` | `localhost` | MQTT broker for valve control |
+| `MQTT_BROKER_PORT` | `1883` | MQTT broker port |
 
 ---
 
