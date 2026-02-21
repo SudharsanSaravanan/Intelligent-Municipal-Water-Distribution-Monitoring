@@ -1,0 +1,36 @@
+{
+    "rules": {
+        ".read": "auth != null",
+        ".write": "auth != null",
+        "waterSystem": {
+            "status": {
+                ".read": true,
+                ".write": true
+            },
+            "history": {
+                "master": {
+                    ".read": "auth != null",
+                    ".write": "auth != null",
+                    ".indexOn": [
+                        "timestamp"
+                    ]
+                },
+                "slave": {
+                    ".read": "auth != null",
+                    ".write": "auth != null",
+                    ".indexOn": [
+                        "timestamp"
+                    ]
+                }
+            },
+            "alerts": {
+                ".read": "auth != null",
+                ".write": "auth != null",
+                ".indexOn": [
+                    "timestamp",
+                    "resolved"
+                ]
+            }
+        }
+    }
+}

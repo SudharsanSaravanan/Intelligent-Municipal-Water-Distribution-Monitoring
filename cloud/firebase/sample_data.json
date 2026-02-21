@@ -1,0 +1,97 @@
+{
+    "waterSystem": {
+        "status": {
+            "master": {
+                "tdsPpm": 142.5,
+                "waterQuality": "Excellent Drinking Water",
+                "tankLevelPercent": 74.0,
+                "tankLevelCm": 74.0
+            },
+            "slave": {
+                "flow1_Lmin": 3.42,
+                "flow2_Lmin": 1.87,
+                "tdsPpm": 265.0,
+                "waterQualityCode": 2,
+                "waterQuality": "Good Quality Water",
+                "tankLevelPercent": 45.0,
+                "tankLevelCm": 45.0
+            }
+        },
+        "history": {
+            "master": {
+                "-SampleMasterKey001": {
+                    "tdsPpm": 120.0,
+                    "waterQuality": "Excellent Drinking Water",
+                    "tankLevelPercent": 60.0,
+                    "tankLevelCm": 60.0,
+                    "timestamp": "2026-02-21T05:40:00Z"
+                },
+                "-SampleMasterKey002": {
+                    "tdsPpm": 135.0,
+                    "waterQuality": "Excellent Drinking Water",
+                    "tankLevelPercent": 67.0,
+                    "tankLevelCm": 67.0,
+                    "timestamp": "2026-02-21T05:45:00Z"
+                },
+                "-SampleMasterKey003": {
+                    "tdsPpm": 142.5,
+                    "waterQuality": "Excellent Drinking Water",
+                    "tankLevelPercent": 74.0,
+                    "tankLevelCm": 74.0,
+                    "timestamp": "2026-02-21T05:50:00Z"
+                }
+            },
+            "slave": {
+                "-SampleSlaveKey001": {
+                    "flow1_Lmin": 2.10,
+                    "flow2_Lmin": 0.95,
+                    "tdsPpm": 280.0,
+                    "waterQualityCode": 2,
+                    "waterQuality": "Good Quality Water",
+                    "tankLevelPercent": 30.0,
+                    "tankLevelCm": 30.0,
+                    "timestamp": "2026-02-21T05:40:00Z"
+                },
+                "-SampleSlaveKey002": {
+                    "flow1_Lmin": 3.20,
+                    "flow2_Lmin": 1.60,
+                    "tdsPpm": 270.0,
+                    "waterQualityCode": 2,
+                    "waterQuality": "Good Quality Water",
+                    "tankLevelPercent": 38.0,
+                    "tankLevelCm": 38.0,
+                    "timestamp": "2026-02-21T05:45:00Z"
+                },
+                "-SampleSlaveKey003": {
+                    "flow1_Lmin": 3.42,
+                    "flow2_Lmin": 1.87,
+                    "tdsPpm": 265.0,
+                    "waterQualityCode": 2,
+                    "waterQuality": "Good Quality Water",
+                    "tankLevelPercent": 45.0,
+                    "tankLevelCm": 45.0,
+                    "timestamp": "2026-02-21T05:50:00Z"
+                }
+            }
+        },
+        "alerts": {
+            "-SampleAlertKey001": {
+                "nodeId": "SLAVE",
+                "type": "LOW_LEVEL",
+                "message": "Sub tank low: 18.0%",
+                "level": "warning",
+                "resolved": true,
+                "timestamp": "2026-02-21T05:30:00Z",
+                "resolvedAt": "2026-02-21T05:45:00Z"
+            },
+            "-SampleAlertKey002": {
+                "nodeId": "MASTER",
+                "type": "LOW_LEVEL",
+                "message": "Main tank low: 22.5%",
+                "level": "warning",
+                "resolved": false,
+                "timestamp": "2026-02-21T05:35:00Z"
+            }
+        }
+    }
+}

@@ -1,0 +1,21 @@
+{
+  "master": {
+    "tankLevelCm": 120,
+    "tankLevelPercent": 75,
+    "tdsPpm": 280,
+    "waterQuality": "Good",
+    "cachedAt": "2026-02-21T06:04:29.000Z"
+  },
+  "slave": {
+    "flow1_Lmin": 8.5,
+    "flow2_Lmin": 6.2,
+    "tankLevelCm": 65,
+    "tankLevelPercent": 60,
+    "tdsPpm": 260,
+    "waterQuality": "Good Quality Water",
+    "waterQualityCode": 2,
+    "cachedAt": "2026-02-21T06:04:29.000Z"
+  },
+  "alerts": [],
+  "lastUpdated": "2026-02-21T06:04:29.000Z"
+}
