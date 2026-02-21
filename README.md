@@ -21,7 +21,6 @@
 9. [REST API Reference](#-rest-api-reference)
 10. [Real-Time Events](#-real-time-events-socketio)
 11. [Environment Variables](#-environment-variables)
-12. [Dashboard Features](#-dashboard-features)
 
 ---
 
