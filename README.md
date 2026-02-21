@@ -1,15 +1,14 @@
-# 💧 Intelligent Municipal Water Distribution Monitoring
+# Intelligent Municipal Water Distribution Monitoring
 
 > A full-stack IoT system for real-time water quality and tank level monitoring using **ESP32**, **ESP-NOW**, **Firebase RTDB**, **Node.js**, and a live animated web dashboard.
 
 [![Firebase](https://img.shields.io/badge/Firebase-RTDB-orange?logo=firebase)](https://firebase.google.com/)
 [![ESP32](https://img.shields.io/badge/Hardware-ESP32-blue)](https://www.espressif.com/)
 [![Node.js](https://img.shields.io/badge/Backend-Node.js-green?logo=node.js)](https://nodejs.org/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 
 ---
 
-## 📋 Table of Contents
+## Table of Contents 
 
 1. [Project Overview](#-project-overview)
 2. [Project Structure](#-project-structure)
@@ -26,7 +25,7 @@
 
 ---
 
-## 🔍 Project Overview
+## Project Overview
 
 This system monitors water distribution across **two tanks** — a **Main Tank (Master ESP32)** and a **Sub Tank (Slave ESP32)**. The slave collects local sensor data and sends it wirelessly via **ESP-NOW** to the master. The master reads its own sensors, combines both datasets, and uploads everything to **Firebase RTDB** every 5 seconds via HTTPS. A **Node.js backend** listens to Firebase in real time, caches data locally, and serves it to a **live web dashboard** via REST API and **Socket.IO**.
 
@@ -43,7 +42,7 @@ This system monitors water distribution across **two tanks** — a **Main Tank (
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 Intelligent-Municipal-Water-Distribution-Monitoring/
@@ -90,7 +89,7 @@ Intelligent-Municipal-Water-Distribution-Monitoring/
 
 ---
 
-## 🔧 Hardware & Pin Configuration
+## Hardware & Pin Configuration
 
 ### Sub Tank Node — Slave ESP32
 
@@ -118,7 +117,7 @@ Intelligent-Municipal-Water-Distribution-Monitoring/
 
 ---
 
-## 🏗️ System Architecture
+## System Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
@@ -172,7 +171,7 @@ Intelligent-Municipal-Water-Distribution-Monitoring/
 
 ---
 
-## ☁️ Firebase Setup
+## Firebase Setup
 
 ### Step 1 — Create the project
 
@@ -190,11 +189,11 @@ Intelligent-Municipal-Water-Distribution-Monitoring/
 
 ### Step 3 — Service account key
 
-1. Firebase Console → ⚙️ Project Settings → **Service Accounts**
+1. Firebase Console → Project Settings → **Service Accounts**
 2. Click **Generate New Private Key** → Download JSON
 3. Save the file as **`backend/serviceAccountKey.json`**
 
-> ⚠️ **Never commit `serviceAccountKey.json` to git.** It is already listed in `.gitignore`.
+> **Never commit `serviceAccountKey.json` to git.** It is already listed in `.gitignore`.
 
 ### Step 4 — Import sample data (optional)
 
@@ -205,7 +204,7 @@ To pre-populate Firebase with the reference structure:
 
 ---
 
-## 📟 Firmware Setup (ESP32)
+## Firmware Setup (ESP32)
 
 ### Prerequisites
 
@@ -223,7 +222,7 @@ To pre-populate Firebase with the reference structure:
 3. Select board: **ESP32 Dev Module**
 4. Upload to the **slave ESP32**
 
-> 💡 To find the master MAC: upload a temporary sketch with `Serial.println(WiFi.macAddress())` to the master board and read it from Serial Monitor.
+> To find the master MAC: upload a temporary sketch with `Serial.println(WiFi.macAddress())` to the master board and read it from Serial Monitor.
 
 ### Step 2 — Flash the Master (Main Tank)
 
@@ -314,7 +313,7 @@ Expected response:
 
 ---
 
-## 🌐 Frontend Setup (Dashboard)
+## Frontend Setup (Dashboard)
 
 The frontend is a **static HTML/CSS/JS** application — no build step required.
 
@@ -332,7 +331,7 @@ Or via File Explorer: right-click `index.html` → **Open with → Chrome/Edge**
 2. Right-click `frontend/index.html` → **Open with Live Server**
 3. Dashboard opens at `http://127.0.0.1:5500/frontend/index.html`
 
-> ✅ Make sure the backend is running on port **3000** before opening the dashboard, so Socket.IO connects immediately.
+> Make sure the backend is running on port **3000** before opening the dashboard, so Socket.IO connects immediately.
 
 ### What you'll see
 
@@ -344,7 +343,7 @@ Or via File Explorer: right-click `index.html` → **Open with → Chrome/Edge**
 
 ---
 
-## 🌐 REST API Reference
+## REST API Reference
 
 Base URL: `http://localhost:3000`
 
@@ -388,7 +387,7 @@ Base URL: `http://localhost:3000`
 
 ---
 
-## 📡 Real-Time Events (Socket.IO)
+## Real-Time Events (Socket.IO)
 
 Connect to: `ws://localhost:3000`
 
@@ -401,7 +400,7 @@ Connect to: `ws://localhost:3000`
 
 ---
 
-## 🔐 Environment Variables
+## Environment Variables
 
 | Variable | Default | Description |
 |---|---|---|
@@ -412,20 +411,7 @@ Connect to: `ws://localhost:3000`
 
 ---
 
-## ✨ Dashboard Features
-
-- 🌊 **Animated water tank visuals** — fill level animates smoothly with wave effects; colour shifts red when critically low
-- 📊 **Dual-axis Chart.js** — plots Level (%) and TDS (ppm) on separate Y-axes simultaneously
-- 🔵 **Quality badges** — colour-coded (Excellent / Good / Average / Bad) based on TDS ppm
-- ⚡ **Socket.IO live push** — data updates without any page refresh
-- 🔁 **REST polling fallback** — if WebSocket drops, polls every 15 seconds
-- 🔔 **Alert toast notifications** — appears on critical/warning events
-- 📱 **Responsive** — sidebar collapses on mobile, works on all screen sizes
-- 🌙 **Dark glassmorphism** design with micro-animations
-
----
-
-## 🗺️ TDS Water Quality Scale
+## TDS Water Quality Scale
 
 | TDS Range (ppm) | Quality Status | Badge Colour |
 |---|---|---|
@@ -436,7 +422,3 @@ Connect to: `ws://localhost:3000`
 | > 500 | BAD Water (High TDS) | 🔴 Red |
 
 ---
-
-## 📝 License
-
-MIT © 2026 — Sudharsan Saravanan | HydroNet IoT Team
