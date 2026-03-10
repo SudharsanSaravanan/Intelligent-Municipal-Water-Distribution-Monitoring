@@ -25,6 +25,18 @@ import os
 WINDOW_SIZE_SECONDS = 300
 
 # ═══════════════════════════════════════════════════════════════════
+# TANK PHYSICAL CONFIG
+# ═══════════════════════════════════════════════════════════════════
+
+# Height of each tank in cm.
+# Used to convert raw ultrasonic distance readings to fill percentage:
+#   level_cm      = TANK_HEIGHT_CM - distance_cm
+#   level_percent = (level_cm / TANK_HEIGHT_CM) * 100
+# Adjust these values to match your actual tank dimensions.
+TANK_HEIGHT_CM     = 100.0   # main tank height in cm
+SUB_TANK_HEIGHT_CM = 100.0   # sub tank height in cm
+
+# ═══════════════════════════════════════════════════════════════════
 # EXPONENTIAL MOVING AVERAGE (EMA) CONFIGURATION
 # ═══════════════════════════════════════════════════════════════════
 
@@ -92,8 +104,9 @@ SCALER_PATH = os.path.join(SAVED_DIR, "saved_scaler.pkl")
 # ═══════════════════════════════════════════════════════════════════
 
 # Firebase RTDB paths used by the training script to fetch historical data
-FIREBASE_HISTORY_MASTER_PATH = "/waterSystem/history/master"
-FIREBASE_HISTORY_SLAVE_PATH = "/waterSystem/history/slave"
+# Schema: /systemHistory/{mainTank,subTank}
+FIREBASE_HISTORY_MASTER_PATH = "/systemHistory/mainTank"
+FIREBASE_HISTORY_SLAVE_PATH  = "/systemHistory/subTank"
 
 # ═══════════════════════════════════════════════════════════════════
 # MQTT CONTROL TOPICS (for valve actuation via LoRa gateway)

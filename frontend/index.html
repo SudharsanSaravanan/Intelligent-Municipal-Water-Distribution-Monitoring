@@ -2,300 +2,451 @@
 <html lang="en">
 
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description"
-        content="HydroNet — Real-time IoT Water Monitoring Dashboard. Track TDS, water quality, tank levels and flow rates across all nodes." />
-    <title>HydroNet — Water Monitoring</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HydroNet — Real-time Water Monitor</title>
 
-    <!-- Google Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap"
-        rel="stylesheet" />
+  <!-- Bootstrap Icons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 
-    <!-- Bootstrap Icons -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+  <!-- Google Fonts -->
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap"
+    rel="stylesheet">
 
-    <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card: rgba(30, 41, 59, 0.9);
+      --border: rgba(255, 255, 255, 0.08);
+      --accent: #38bdf8;
+      --green: #4ade80;
+      --yellow: #fbbf24;
+      --red: #f87171;
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+    }
 
-    <!-- Socket.IO -->
-    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
 
-    <link rel="stylesheet" href="css/style.css" />
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 24px 16px;
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      font-size: 2.2rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      margin-bottom: 1.8rem;
+    }
+
+    .status-bar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 2rem;
+      font-size: 0.95rem;
+    }
+
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #475569;
+    }
+
+    .connected {
+      background: var(--green) !important;
+      box-shadow: 0 0 10px var(--green);
+    }
+
+    .error {
+      background: var(--red) !important;
+      box-shadow: 0 0 10px var(--red);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+      gap: 1.6rem;
+    }
+
+    .tank-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 1.6rem;
+      backdrop-filter: blur(10px);
+    }
+
+    .tank-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin-bottom: 1.4rem;
+    }
+
+    .tank-header i {
+      font-size: 1.4rem;
+    }
+
+    .tank-content {
+      display: flex;
+      gap: 1.8rem;
+      align-items: flex-start;
+      flex-wrap: wrap;
+    }
+
+    .tank-visual {
+      width: 110px;
+      height: 220px;
+      border: 3px solid rgba(56, 189, 248, 0.35);
+      border-radius: 12px;
+      position: relative;
+      overflow: hidden;
+      background: rgba(0, 0, 0, 0.35);
+    }
+
+    .water-fill {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: linear-gradient(0deg, #0ea5e9 0%, #38bdf8 100%);
+      transition: height 0.9s ease-out;
+    }
+
+    .water-fill.sub {
+      background: linear-gradient(0deg, #06b6d4 0%, #22d3ee 100%);
+    }
+
+    .level-text {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: white;
+      text-shadow: 0 2px 6px black;
+    }
+
+    .stats-list {
+      flex: 1;
+      min-width: 220px;
+    }
+
+    .stat {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.7rem 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .stat:last-child {
+      border-bottom: none;
+    }
+
+    .stat-label {
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .stat-value {
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 600;
+      font-size: 1.05rem;
+    }
+
+    .quality {
+      padding: 5px 12px;
+      border-radius: 999px;
+      font-size: 0.82rem;
+      font-weight: 700;
+    }
+
+    .q-excellent {
+      background: #4ade8022;
+      color: #4ade80;
+      border: 1px solid #4ade8040;
+    }
+
+    .q-good {
+      background: #38bdf822;
+      color: #38bdf8;
+      border: 1px solid #38bdf840;
+    }
+
+    .q-average {
+      background: #fbbf2422;
+      color: #fbbf24;
+      border: 1px solid #fbbf2440;
+    }
+
+    .q-poor {
+      background: #f8717122;
+      color: #f87171;
+      border: 1px solid #f8717140;
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 1rem;
+      margin-top: 2rem;
+    }
+
+    .summary-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.2rem;
+      text-align: center;
+    }
+
+    .sum-label {
+      color: var(--muted);
+      font-size: 0.9rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .sum-value {
+      font-size: 1.7rem;
+      font-weight: 700;
+    }
+
+    @media (max-width: 700px) {
+      .tank-content {
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .tank-visual {
+        width: 140px;
+        height: 260px;
+      }
+    }
+  </style>
 </head>
 
 <body>
 
-    <!-- ── Sidebar ────────────────────────────────────────────── -->
-    <aside class="sidebar" id="sidebar">
-        <div class="sidebar-brand">
-            <!-- <div class="brand-icon"><i class="bi bi-droplet-fill"></i></div> -->
-            <div class="brand-text">
-                <span class="brand-name">AQUA-SENSE</span>
-                <br>
-                <span class="brand-sub">Monitor</span>
-            </div>
+  <div class="container">
+
+    <h1>HydroNet</h1>
+    <div class="subtitle">Real-time IoT Water Monitoring</div>
+
+    <div class="status-bar">
+      <div class="status-dot" id="dot"></div>
+      <span id="status">Connecting...</span>
+      <span style="margin-left:auto; color:var(--muted);">
+        Updated: <span id="updated">—</span>
+      </span>
+    </div>
+
+    <div class="grid">
+
+      <!-- Main Tank -->
+      <div class="tank-card">
+        <div class="tank-header">
+          <i class="bi bi-droplet-fill" style="color:#38bdf8"></i>
+          Main Tank
         </div>
-
-        <nav class="sidebar-nav">
-            <a href="#" class="nav-item active" data-section="section-dashboard" id="nav-dashboard">
-                <i class="bi bi-grid-1x2-fill"></i><span>Dashboard</span>
-            </a>
-            <a href="#" class="nav-item" data-section="section-history" id="nav-history">
-                <i class="bi bi-graph-up-arrow"></i><span>History</span>
-            </a>
-            <a href="#" class="nav-item" data-section="section-alerts" id="nav-alerts">
-                <i class="bi bi-bell-fill"></i><span>Alerts</span>
-                <span class="badge" id="alert-badge">0</span>
-            </a>
-        </nav>
-
-        <div class="sidebar-footer">
-            <div class="connection-status">
-                <span class="status-dot" id="status-dot"></span>
-                <span id="status-text">Connecting…</span>
+        <div class="tank-content">
+          <div class="tank-visual">
+            <div class="water-fill" id="main-water" style="height:0%"></div>
+            <div class="level-text" id="main-level">—%</div>
+          </div>
+          <div class="stats-list">
+            <div class="stat">
+              <span class="stat-label">Level</span>
+              <span class="stat-value" id="main-pct">—%</span>
             </div>
-            <div class="last-update">
-                <i class="bi bi-clock"></i>
-                <span id="last-update-time">--:--:--</span>
+            <div class="stat">
+              <span class="stat-label">Distance</span>
+              <span class="stat-value" id="main-dist">— cm</span>
             </div>
+            <div class="stat">
+              <span class="stat-label">Flow</span>
+              <span class="stat-value" id="main-flow">— L/min</span>
+            </div>
+            <div class="stat">
+              <span class="stat-label">TDS</span>
+              <span class="stat-value" id="main-tds">— ppm</span>
+            </div>
+            <div class="stat">
+              <span class="stat-label">Quality</span>
+              <span><span class="quality" id="main-quality">—</span></span>
+            </div>
+          </div>
         </div>
-    </aside>
+      </div>
 
-    <!-- ── Mobile Header ─────────────────────────────────────── -->
-    <header class="mobile-header">
-        <button class="menu-btn" id="menu-btn" aria-label="Toggle sidebar">
-            <i class="bi bi-list"></i>
-        </button>
-        <span class="mobile-brand">HydroNet</span>
-        <div class="status-dot-mobile" id="status-dot-mobile"></div>
-    </header>
-
-    <!-- ── Main Content ──────────────────────────────────────── -->
-    <main class="main-content">
-
-        <!-- ═══════════════════════════════════════════ DASHBOARD -->
-        <section class="page-section active" id="section-dashboard">
-            <div class="page-header">
-                <div>
-                    <h1 class="page-title">Dashboard</h1>
-                    <p class="page-subtitle">Live water quality &amp; tank monitoring</p>
-                </div>
-                <button class="btn btn-primary" id="refresh-btn">
-                    <i class="bi bi-arrow-clockwise"></i> Refresh
-                </button>
+      <!-- Sub Tank -->
+      <div class="tank-card">
+        <div class="tank-header">
+          <i class="bi bi-droplet-half" style="color:#22d3ee"></i>
+          Sub Tank
+        </div>
+        <div class="tank-content">
+          <div class="tank-visual">
+            <div class="water-fill sub" id="sub-water" style="height:0%"></div>
+            <div class="level-text" id="sub-level">—%</div>
+          </div>
+          <div class="stats-list">
+            <div class="stat">
+              <span class="stat-label">Level</span>
+              <span class="stat-value" id="sub-pct">—%</span>
             </div>
-
-            <!-- KPI Cards — Row 1: Tank Levels -->
-            <div class="section-label">Tank Levels</div>
-            <div class="kpi-grid" id="kpi-levels">
-
-                <div class="kpi-card">
-                    <div class="kpi-icon blue"><i class="bi bi-water"></i></div>
-                    <div class="kpi-body">
-                        <span class="kpi-label">Main Tank Level</span>
-                        <span class="kpi-value" id="kpi-master-pct">--%</span>
-                        <span class="kpi-sub" id="kpi-master-cm">-- cm</span>
-                    </div>
-                </div>
-
-                <div class="kpi-card">
-                    <div class="kpi-icon cyan"><i class="bi bi-droplet-half"></i></div>
-                    <div class="kpi-body">
-                        <span class="kpi-label">Sub Tank Level</span>
-                        <span class="kpi-value" id="kpi-slave-pct">--%</span>
-                        <span class="kpi-sub" id="kpi-slave-cm">-- cm</span>
-                    </div>
-                </div>
-
-                <div class="kpi-card">
-                    <div class="kpi-icon purple"><i class="bi bi-activity"></i></div>
-                    <div class="kpi-body">
-                        <span class="kpi-label">Flow Line 1</span>
-                        <span class="kpi-value" id="kpi-flow1">-- L/min</span>
-                        <span class="kpi-sub">Sub tank inlet</span>
-                    </div>
-                </div>
-
-                <div class="kpi-card">
-                    <div class="kpi-icon teal"><i class="bi bi-activity"></i></div>
-                    <div class="kpi-body">
-                        <span class="kpi-label">Flow Line 2</span>
-                        <span class="kpi-value" id="kpi-flow2">-- L/min</span>
-                        <span class="kpi-sub">Sub tank outlet</span>
-                    </div>
-                </div>
-
+            <div class="stat">
+              <span class="stat-label">Distance</span>
+              <span class="stat-value" id="sub-dist">— cm</span>
             </div>
-
-            <!-- KPI Cards — Row 2: Water Quality -->
-            <div class="section-label" style="margin-top:12px;">Water Quality</div>
-            <div class="kpi-grid" id="kpi-quality">
-
-                <div class="kpi-card">
-                    <div class="kpi-icon green" id="kpi-master-tds-icon"><i class="bi bi-eyedropper"></i></div>
-                    <div class="kpi-body">
-                        <span class="kpi-label">Main Tank TDS</span>
-                        <span class="kpi-value" id="kpi-master-tds">-- ppm</span>
-                        <span class="kpi-sub" id="kpi-master-quality">--</span>
-                    </div>
-                </div>
-
-                <div class="kpi-card">
-                    <div class="kpi-icon green" id="kpi-slave-tds-icon"><i class="bi bi-eyedropper"></i></div>
-                    <div class="kpi-body">
-                        <span class="kpi-label">Sub Tank TDS</span>
-                        <span class="kpi-value" id="kpi-slave-tds">-- ppm</span>
-                        <span class="kpi-sub" id="kpi-slave-quality">--</span>
-                    </div>
-                </div>
-
-                <div class="kpi-card">
-                    <div class="kpi-icon red"><i class="bi bi-exclamation-triangle-fill"></i></div>
-                    <div class="kpi-body">
-                        <span class="kpi-label">Active Alerts</span>
-                        <span class="kpi-value" id="kpi-alert-count">--</span>
-                        <span class="kpi-sub">Unresolved issues</span>
-                    </div>
-                </div>
-
+            <div class="stat">
+              <span class="stat-label">Flow</span>
+              <span class="stat-value" id="sub-flow">— L/min</span>
             </div>
-
-            <!-- Tank Visual Row -->
-            <div class="tanks-visual-row">
-
-                <!-- Master Tank Card -->
-                <div class="tank-card">
-                    <h2 class="section-title">
-                        <i class="bi bi-droplet-fill"></i> Main Tank (Master)
-                    </h2>
-                    <div class="tank-wrap">
-                        <div class="tank-container">
-                            <div class="water-fill main" id="master-water-fill">
-                                <div class="wave"></div>
-                                <div class="wave wave2"></div>
-                            </div>
-                            <div class="tank-level-label" id="master-level-label">--%</div>
-                        </div>
-                        <div class="tank-stats">
-                            <div class="stat-row">
-                                <span class="stat-label">Level</span>
-                                <span class="stat-value mono" id="master-stat-pct">--%</span>
-                            </div>
-                            <div class="stat-row">
-                                <span class="stat-label">Height</span>
-                                <span class="stat-value mono" id="master-stat-cm">-- cm</span>
-                            </div>
-                            <div class="stat-row">
-                                <span class="stat-label">TDS</span>
-                                <span class="stat-value mono" id="master-stat-tds">-- ppm</span>
-                            </div>
-                            <div class="stat-row">
-                                <span class="stat-label">Quality</span>
-                                <span class="stat-value" id="master-stat-quality">
-                                    <span class="quality-badge" id="master-quality-badge">--</span>
-                                </span>
-                            </div>
-                            <div class="stat-row">
-                                <span class="stat-label">Updated</span>
-                                <span class="stat-value mono" id="master-stat-time">--</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Slave Tank Card -->
-                <div class="tank-card">
-                    <h2 class="section-title">
-                        <i class="bi bi-droplet-half"></i> Sub Tank (Slave)
-                    </h2>
-                    <div class="tank-wrap">
-                        <div class="tank-container">
-                            <div class="water-fill sub" id="slave-water-fill">
-                                <div class="wave"></div>
-                                <div class="wave wave2"></div>
-                            </div>
-                            <div class="tank-level-label" id="slave-level-label">--%</div>
-                        </div>
-                        <div class="tank-stats">
-                            <div class="stat-row">
-                                <span class="stat-label">Level</span>
-                                <span class="stat-value mono" id="slave-stat-pct">--%</span>
-                            </div>
-                            <div class="stat-row">
-                                <span class="stat-label">Height</span>
-                                <span class="stat-value mono" id="slave-stat-cm">-- cm</span>
-                            </div>
-                            <div class="stat-row">
-                                <span class="stat-label">TDS</span>
-                                <span class="stat-value mono" id="slave-stat-tds">-- ppm</span>
-                            </div>
-                            <div class="stat-row">
-                                <span class="stat-label">Quality</span>
-                                <span class="stat-value">
-                                    <span class="quality-badge" id="slave-quality-badge">--</span>
-                                </span>
-                            </div>
-                            <div class="stat-row">
-                                <span class="stat-label">Flow 1</span>
-                                <span class="stat-value mono" id="slave-stat-flow1">-- L/min</span>
-                            </div>
-                            <div class="stat-row">
-                                <span class="stat-label">Flow 2</span>
-                                <span class="stat-value mono" id="slave-stat-flow2">-- L/min</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
+            <div class="stat">
+              <span class="stat-label">TDS</span>
+              <span class="stat-value" id="sub-tds">— ppm</span>
             </div>
-        </section>
-
-        <!-- ═════════════════════════════════════════════ HISTORY -->
-        <section class="page-section" id="section-history">
-            <div class="page-header">
-                <div>
-                    <h1 class="page-title">History</h1>
-                    <p class="page-subtitle">Tank level &amp; TDS trends over time</p>
-                </div>
-                <div class="btn-group">
-                    <button class="btn btn-outline active" id="hist-master-btn" onclick="loadHistory('master')">Main
-                        Tank</button>
-                    <button class="btn btn-outline" id="hist-slave-btn" onclick="loadHistory('slave')">Sub Tank</button>
-                </div>
+            <div class="stat">
+              <span class="stat-label">Quality</span>
+              <span><span class="quality" id="sub-quality">—</span></span>
             </div>
+          </div>
+        </div>
+      </div>
 
-            <div class="chart-card">
-                <div class="chart-title" id="chart-title">Main Tank — Level &amp; TDS History</div>
-                <canvas id="levelChart" height="100"></canvas>
-            </div>
-        </section>
+    </div>
 
-        <!-- ══════════════════════════════════════════════ ALERTS -->
-        <section class="page-section" id="section-alerts">
-            <div class="page-header">
-                <div>
-                    <h1 class="page-title">Alerts</h1>
-                    <p class="page-subtitle">Active system notifications</p>
-                </div>
-            </div>
-            <div id="alerts-list" class="alerts-list">
-                <div class="empty-state">
-                    <i class="bi bi-shield-check"></i>
-                    <p>No active alerts — all systems nominal</p>
-                </div>
-            </div>
-        </section>
+    <!-- Quick summary -->
+    <div class="summary-grid">
+      <div class="summary-card">
+        <div class="sum-label">Main Tank Level</div>
+        <div class="sum-value" id="sum-main">—%</div>
+      </div>
+      <div class="summary-card">
+        <div class="sum-label">Sub Tank Level</div>
+        <div class="sum-value" id="sum-sub">—%</div>
+      </div>
+      <div class="summary-card">
+        <div class="sum-label">Main TDS</div>
+        <div class="sum-value" id="sum-main-tds">— ppm</div>
+      </div>
+      <div class="summary-card">
+        <div class="sum-label">Sub TDS</div>
+        <div class="sum-value" id="sum-sub-tds">— ppm</div>
+      </div>
+    </div>
 
-    </main>
+  </div>
 
-    <!-- ── Toast Notifications ────────────────────────────────── -->
-    <div class="toast-container" id="toast-container"></div>
+  <script>
+    // ── Config ───────────────────────────────────────
+    const API_URL = "http://localhost:5000/api";
+    const INTERVAL_MS = 1000; // 1 second
 
-    <script src="js/app.js"></script>
+    // ── Helpers ─────────────────────────────────────
+    const $ = id => document.getElementById(id);
+
+    function getQuality(tds) {
+      tds = Number(tds) || 0;
+      if (tds <= 300) return { txt: "Excellent", cls: "q-excellent" };
+      if (tds <= 600) return { txt: "Good", cls: "q-good" };
+      if (tds <= 900) return { txt: "Average", cls: "q-average" };
+      return { txt: "Poor", cls: "q-poor" };
+    }
+
+    function updateLevel(waterId, labelId, pct) {
+      pct = Math.max(0, Math.min(100, Number(pct) || 0));
+      $(waterId).style.height = pct + "%";
+      $(labelId).textContent = Math.round(pct) + "%";
+    }
+
+    function updateQuality(id, tds) {
+      const q = getQuality(tds);
+      $(id).textContent = q.txt;
+      $(id).className = "quality " + q.cls;
+    }
+
+    // ── Render ──────────────────────────────────────
+    function updateUI(data) {
+      if (!data?.mainTank || !data?.subTank) return;
+
+      const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      $("updated").textContent = now;
+      $("dot").className = "status-dot connected";
+      $("status").textContent = "Live";
+
+      // Main Tank
+      const m = data.mainTank;
+      const mPct = Math.max(0, 100 - (Number(m.distance) || 0)); // assuming distance = empty height
+
+      updateLevel("main-water", "main-level", mPct);
+      $("main-pct").textContent = Math.round(mPct) + "%";
+      $("main-dist").textContent = (Number(m.distance) || 0) + " cm";
+      $("main-flow").textContent = (Number(m.flow) || 0).toFixed(1) + " L/min";
+      $("main-tds").textContent = Math.round(Number(m.tds) || 0) + " ppm";
+      updateQuality("main-quality", m.tds);
+
+      $("sum-main").textContent = Math.round(mPct) + "%";
+      $("sum-main-tds").textContent = Math.round(Number(m.tds) || 0) + " ppm";
+
+      // Sub Tank
+      const s = data.subTank;
+      const sPct = Math.max(0, 100 - (Number(s.distance) || 0));
+
+      updateLevel("sub-water", "sub-level", sPct);
+      $("sub-pct").textContent = Math.round(sPct) + "%";
+      $("sub-dist").textContent = (Number(s.distance) || 0) + " cm";
+      $("sub-flow").textContent = (Number(s.flow) || 0).toFixed(1) + " L/min";
+      $("sub-tds").textContent = Math.round(Number(s.tds) || 0) + " ppm";
+      updateQuality("sub-quality", s.tds);
+
+      $("sum-sub").textContent = Math.round(sPct) + "%";
+      $("sum-sub-tds").textContent = Math.round(Number(s.tds) || 0) + " ppm";
+    }
+
+    // ── Polling ─────────────────────────────────────
+    async function fetchAndUpdate() {
+      try {
+        const res = await fetch(API_URL);
+        if (!res.ok) throw new Error("HTTP " + res.status);
+
+        const json = await res.json();
+        if (json.status === "success" && json.data) {
+          updateUI(json.data);
+        }
+      } catch (err) {
+        console.error(err);
+        $("dot").className = "status-dot error";
+        $("status").textContent = "Connection lost";
+      }
+    }
+
+    fetchAndUpdate();                           // first fetch
+    setInterval(fetchAndUpdate, INTERVAL_MS);   // every 1 second
+
+  </script>
 </body>
 
 </html>

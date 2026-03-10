@@ -3,12 +3,17 @@
  *
  * Base path: /api/telemetry
  *
- * GET  /api/telemetry/latest           — full latest snapshot (from cache)
- * GET  /api/telemetry/master           — master tank live data
- * GET  /api/telemetry/slave            — slave/sub tank live data
- * GET  /api/telemetry/history/master   — master tank history (last N)
- * GET  /api/telemetry/history/slave    — slave tank history (last N)
- * GET  /api/telemetry/alerts           — active (unresolved) alerts
+ * Firebase schema (live ESP32 pushes):
+ *   /waterData/<push_id>       { mainTank, subTank }
+ *   /systemHistory/mainTank    (push log added by server)
+ *   /systemHistory/subTank     (push log added by server)
+ *   /systemAlerts              (active alerts added by server)
+ *
+ * GET  /api/telemetry/latest             — full latest snapshot (from cache)
+ * GET  /api/telemetry/master             — main tank live data
+ * GET  /api/telemetry/slave              — sub tank live data
+ * GET  /api/telemetry/history/:node      — history (node = master|slave)
+ * GET  /api/telemetry/alerts             — active (unresolved) alerts
  * POST /api/telemetry/alerts/:id/resolve — resolve an alert
  */
 
@@ -17,8 +22,8 @@ const router = express.Router();
 const { db } = require("../firebase");
 const { readCache } = require("../database/cache.helper");
 
-// ── GET /api/telemetry/latest ─────────────────────────────────
-// Returns the full cached snapshot (fastest — no Firebase round-trip)
+// ── GET /api/telemetry/latest ─────────────────────────────────────
+// Returns the full cached snapshot — fastest path, no Firebase round-trip
 router.get("/latest", (req, res) => {
     const cache = readCache();
     res.json({
@@ -29,49 +34,58 @@ router.get("/latest", (req, res) => {
     });
 });
 
-// ── GET /api/telemetry/master ─────────────────────────────────
+// ── GET /api/telemetry/master ─────────────────────────────────────
+// Reads latest push from /waterData live, falls back to cache
 router.get("/master", async (req, res) => {
     try {
-        const snap = await db.ref("/waterSystem/status/master").once("value");
+        const snap = await db.ref("/waterData").orderByKey().limitToLast(1).once("value");
         if (!snap.exists()) {
-            // fallback to cache
             const cache = readCache();
             return res.json({ success: true, source: "local_cache", data: cache.master || {} });
         }
-        res.json({ success: true, source: "firebase", data: snap.val() });
+        let data = {};
+        snap.forEach(child => { if (child.val().mainTank) data = child.val().mainTank; });
+        res.json({ success: true, source: "firebase", data });
     } catch (err) {
         const cache = readCache();
         res.json({ success: true, source: "local_cache", data: cache.master || {}, error: err.message });
     }
 });
 
-// ── GET /api/telemetry/slave ──────────────────────────────────
+// ── GET /api/telemetry/slave ──────────────────────────────────────
+// Reads latest push from /waterData live, falls back to cache
 router.get("/slave", async (req, res) => {
     try {
-        const snap = await db.ref("/waterSystem/status/slave").once("value");
+        const snap = await db.ref("/waterData").orderByKey().limitToLast(1).once("value");
         if (!snap.exists()) {
             const cache = readCache();
             return res.json({ success: true, source: "local_cache", data: cache.slave || {} });
         }
-        res.json({ success: true, source: "firebase", data: snap.val() });
+        let data = {};
+        snap.forEach(child => { if (child.val().subTank) data = child.val().subTank; });
+        res.json({ success: true, source: "firebase", data });
     } catch (err) {
         const cache = readCache();
         res.json({ success: true, source: "local_cache", data: cache.slave || {}, error: err.message });
     }
 });
 
-// ── GET /api/telemetry/history/:node?limit=50 ─────────────────
-// node: "master" | "slave"
+// ── GET /api/telemetry/history/:node?limit=50 ─────────────────────
+// node: "master" | "slave"  (maps to mainTank / subTank history)
 router.get("/history/:node", async (req, res) => {
     const { node } = req.params;
     if (!["master", "slave"].includes(node)) {
         return res.status(400).json({ success: false, message: "node must be 'master' or 'slave'" });
     }
 
+    const firebasePath = node === "master"
+        ? "/systemHistory/mainTank"
+        : "/systemHistory/subTank";
+
     const limit = Math.min(parseInt(req.query.limit) || 50, 200);
 
     try {
-        const snap = await db.ref(`/waterSystem/history/${node}`)
+        const snap = await db.ref(firebasePath)
             .orderByChild("timestamp")
             .limitToLast(limit)
             .once("value");
@@ -83,17 +97,18 @@ router.get("/history/:node", async (req, res) => {
             success: true,
             node,
             count: history.length,
-            data: history.reverse() // newest first
+            data: history.reverse()   // newest first
         });
     } catch (err) {
         res.status(500).json({ success: false, message: err.message });
     }
 });
 
-// ── GET /api/telemetry/alerts ─────────────────────────────────
+// ── GET /api/telemetry/alerts ─────────────────────────────────────
+// Reads active (unresolved) alerts from /systemAlerts
 router.get("/alerts", async (req, res) => {
     try {
-        const snap = await db.ref("/waterSystem/alerts")
+        const snap = await db.ref("/systemAlerts")
             .orderByChild("resolved").equalTo(false)
             .once("value");
 
@@ -106,11 +121,12 @@ router.get("/alerts", async (req, res) => {
     }
 });
 
-// ── POST /api/telemetry/alerts/:id/resolve ───────────────────
+// ── POST /api/telemetry/alerts/:id/resolve ────────────────────────
+// Resolves an alert by updating its status in /systemAlerts
 router.post("/alerts/:id/resolve", async (req, res) => {
     const { id } = req.params;
     try {
-        await db.ref(`/waterSystem/alerts/${id}`).update({
+        await db.ref(`/systemAlerts/${id}`).update({
             resolved: true,
             resolvedAt: new Date().toISOString()
         });

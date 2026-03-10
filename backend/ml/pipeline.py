@@ -70,26 +70,51 @@ def _get_mqtt_client():
 
 def _normalize_telemetry(data: dict) -> dict:
     """
-    Normalize incoming telemetry to the format expected by the engine.
+    Normalize incoming telemetry to the format expected by the ML engine.
 
-    Firebase data uses keys like flow1_Lmin, tankLevelPercent, tdsPpm.
-    The ML pipeline expects: flow, tank_level, tds, timestamp.
+    Supports both the new simplified schema (flat keys from ESP32):
+        flow       — water flow rate in L/min       (field: 'flow')
+        tds        — total dissolved solids in ppm   (field: 'tds')
+        distance   — ultrasonic distance in cm       (field: 'distance')
+        tankLevelPercent — pre-derived level %       (field: 'tankLevelPercent')
 
-    Args:
-        data: Raw telemetry dict from Firebase/MQTT.
+    And the old schema (for backwards compatibility):
+        flow1_Lmin, flow2_Lmin, tdsPpm, tankLevelPercent
 
-    Returns:
-        Normalized dict with standard keys.
+    The ML pipeline always expects: flow, tank_level (%), tds (ppm), timestamp.
     """
-    flow1 = float(data.get("flow1_Lmin", 0) or 0)
-    flow2 = float(data.get("flow2_Lmin", 0) or 0)
-    flow = (flow1 + flow2) / 2.0 if (flow1 + flow2) > 0 else flow1
+    # ── flow ─────────────────────────────────────────────────────
+    # New schema sends 'flow' directly; old schema had flow1_Lmin / flow2_Lmin
+    if "flow" in data:
+        flow = float(data["flow"] or 0)
+    else:
+        flow1 = float(data.get("flow1_Lmin", 0) or 0)
+        flow2 = float(data.get("flow2_Lmin", 0) or 0)
+        flow  = (flow1 + flow2) / 2.0 if (flow1 + flow2) > 0 else flow1
+
+    # ── tds ──────────────────────────────────────────────────────
+    # New schema: 'tds'  |  Old schema: 'tdsPpm'
+    tds = float(data.get("tds") or data.get("tdsPpm") or 0)
+
+    # ── tank_level (%) ───────────────────────────────────────────
+    # Priority 1: pre-derived tankLevelPercent (server already computed it)
+    # Priority 2: derive from distance using TANK_HEIGHT_CM config
+    if "tankLevelPercent" in data and data["tankLevelPercent"] is not None and float(data["tankLevelPercent"]) >= 0:
+        tank_level = float(data["tankLevelPercent"])
+    elif "distance" in data and data["distance"] is not None and float(data["distance"]) >= 0:
+        from . import config as _cfg
+        tank_height = getattr(_cfg, "TANK_HEIGHT_CM", 100.0)
+        distance    = float(data["distance"])
+        level_cm    = max(0.0, tank_height - distance)
+        tank_level  = round((level_cm / tank_height) * 100.0, 1)
+    else:
+        tank_level = 0.0   # sensor error / no reading
 
     return {
-        "flow": flow,
-        "tank_level": float(data.get("tankLevelPercent", 0) or 0),
-        "tds": float(data.get("tdsPpm", 0) or 0),
-        "timestamp": data.get("timestamp", datetime.utcnow().isoformat()),
+        "flow":       flow,
+        "tank_level": tank_level,
+        "tds":        tds,
+        "timestamp":  data.get("timestamp", datetime.utcnow().isoformat()),
     }
 
 

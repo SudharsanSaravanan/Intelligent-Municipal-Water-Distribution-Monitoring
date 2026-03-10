@@ -47,21 +47,30 @@ def _fetch_firebase_history() -> list[dict]:
     """
     Fetch historical telemetry records from Firebase RTDB.
 
-    Retrieves both master and slave tank history, merges them,
-    and converts to the unified record format expected by the
-    feature engineering module.
+    New schema paths:
+        /systemHistory/mainTank  — main tank records
+        /systemHistory/subTank   — sub tank records (has flow sensor)
+
+    Each record has: flow, tds, distance, tankLevelPercent, tankLevelCm,
+                     waterQuality, timestamp
 
     Returns:
         List of dicts with keys: flow, tank_level, tds, timestamp.
     """
+    TANK_HEIGHT_CM = 100.0   # fallback if tankLevelPercent is missing
+
+    def dist_to_pct(distance):
+        """Convert raw ultrasonic distance to tank fill percentage."""
+        if distance is None or float(distance) < 0:
+            return None
+        level_cm = max(0.0, TANK_HEIGHT_CM - float(distance))
+        return round((level_cm / TANK_HEIGHT_CM) * 100.0, 1)
+
     try:
-        # Import Firebase admin from the existing backend config
         import firebase_admin
         from firebase_admin import credentials, db as firebase_db
 
-        # Check if already initialized by the Node.js side or prior call
         if not firebase_admin._apps:
-            # Look for service account key in the backend directory
             key_path = os.path.join(
                 os.path.dirname(__file__), "..", "serviceAccountKey.json"
             )
@@ -79,41 +88,56 @@ def _fetch_firebase_history() -> list[dict]:
 
         records = []
 
-        # Fetch master history
-        logger.info("Fetching master tank history from Firebase …")
+        # ── Main tank history ─────────────────────────────────────
+        # Main tank has no flow sensor; flow = 0
+        logger.info("Fetching mainTank history from /systemHistory/mainTank …")
         master_ref = firebase_db.reference(config.FIREBASE_HISTORY_MASTER_PATH)
         master_data = master_ref.get() or {}
 
         for key, entry in master_data.items():
+            # tankLevelPercent may already be derived by server.js, else fall back
+            level_pct = entry.get("tankLevelPercent")
+            if level_pct is None or float(level_pct) < 0:
+                level_pct = dist_to_pct(entry.get("distance"))
+
             records.append({
-                "flow": 0.0,  # Master node doesn't have flow sensors
-                "tank_level": entry.get("tankLevelPercent", 0),
-                "tds": entry.get("tdsPpm", 0),
-                "timestamp": entry.get("timestamp", ""),
-                "node": "master",
+                "flow":       0.0,   # main tank has no flow sensor
+                "tank_level": float(level_pct) if level_pct is not None else 0.0,
+                "tds":        float(entry.get("tds") or entry.get("tdsPpm") or 0),
+                "timestamp":  entry.get("timestamp", ""),
+                "node":       "mainTank",
             })
 
-        # Fetch slave history
-        logger.info("Fetching slave tank history from Firebase …")
+        # ── Sub tank history ──────────────────────────────────────
+        # Sub tank has a flow sensor — primary input for leak detection
+        logger.info("Fetching subTank history from /systemHistory/subTank …")
         slave_ref = firebase_db.reference(config.FIREBASE_HISTORY_SLAVE_PATH)
         slave_data = slave_ref.get() or {}
 
         for key, entry in slave_data.items():
-            # Slave node has flow sensors (flow1, flow2)
-            flow1 = entry.get("flow1_Lmin", 0) or 0
-            flow2 = entry.get("flow2_Lmin", 0) or 0
-            avg_flow = (float(flow1) + float(flow2)) / 2.0
+            # New schema: 'flow' field
+            # Old schema fallback: average of flow1_Lmin + flow2_Lmin
+            if "flow" in entry:
+                flow = float(entry["flow"] or 0)
+            else:
+                f1 = float(entry.get("flow1_Lmin", 0) or 0)
+                f2 = float(entry.get("flow2_Lmin", 0) or 0)
+                flow = (f1 + f2) / 2.0 if (f1 + f2) > 0 else f1
+
+            level_pct = entry.get("tankLevelPercent")
+            if level_pct is None or float(level_pct) < 0:
+                level_pct = dist_to_pct(entry.get("distance"))
 
             records.append({
-                "flow": avg_flow,
-                "tank_level": entry.get("tankLevelPercent", 0),
-                "tds": entry.get("tdsPpm", 0),
-                "timestamp": entry.get("timestamp", ""),
-                "node": "slave",
+                "flow":       flow,
+                "tank_level": float(level_pct) if level_pct is not None else 0.0,
+                "tds":        float(entry.get("tds") or entry.get("tdsPpm") or 0),
+                "timestamp":  entry.get("timestamp", ""),
+                "node":       "subTank",
             })
 
         logger.info(f"Fetched {len(records)} total historical records "
-                    f"({len(master_data)} master + {len(slave_data)} slave)")
+                    f"({len(master_data)} mainTank + {len(slave_data)} subTank)")
         return records
 
     except Exception as e:
