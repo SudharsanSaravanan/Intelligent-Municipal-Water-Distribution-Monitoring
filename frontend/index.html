@@ -360,6 +360,12 @@
 
   </div>
 
+  <!-- Sub tank flow alert tab -->
+  <div id="flow-alert"
+    style="display:none; position:fixed; top:20px; right:20px; background:var(--red); color:white; padding:15px 20px; border-radius:8px; z-index:1000; font-weight:bold; box-shadow:0 4px 6px rgba(0,0,0,0.3); font-size:1.1rem; border:2px solid #fff;">
+    ⚠️ Alert: Sub Tank flow is high! (> 2 L/min)
+  </div>
+
   <script>
     // ── Config ───────────────────────────────────────
     const API_URL = "http://localhost:5000/api";
@@ -399,6 +405,7 @@
 
       // Main Tank
       const m = data.mainTank;
+      m.distance = 70; // Hardcoded per user request
       const mPct = Math.max(0, 100 - (Number(m.distance) || 0)); // assuming distance = empty height
 
       updateLevel("main-water", "main-level", mPct);
@@ -424,6 +431,12 @@
 
       $("sum-sub").textContent = Math.round(sPct) + "%";
       $("sum-sub-tds").textContent = Math.round(Number(s.tds) || 0) + " ppm";
+
+      if (Number(s.flow) > 2) {
+        $("flow-alert").style.display = "block";
+      } else {
+        $("flow-alert").style.display = "none";
+      }
     }
 
     // ── Polling ─────────────────────────────────────
@@ -448,5 +461,4 @@
 
   </script>
 </body>
-
 </html>

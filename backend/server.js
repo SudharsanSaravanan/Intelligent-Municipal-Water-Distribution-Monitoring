@@ -7,12 +7,18 @@ const cors = require("cors");
 const app = express();
 app.use(cors());
 
-// Environment variables
 const PORT = process.env.PORT || 5000;
 const databaseURL = process.env.FIREBASE_DB_URL;
-const serviceAccount = require(process.env.SERVICE_ACCOUNT);
 
-// Initialize Firebase
+// check env
+if (!process.env.FIREBASE_SERVICE_ACCOUNT) {
+  console.error("FIREBASE_SERVICE_ACCOUNT not found in .env");
+  process.exit(1);
+}
+
+const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, "\n");
+
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
   databaseURL: databaseURL,
@@ -21,12 +27,10 @@ admin.initializeApp({
 const db = admin.database();
 const ref = db.ref("waterData");
 
-// store latest data
 let latestData = {};
 
 console.log("Listening to new IoT data...\n");
 
-// get latest existing key
 ref.limitToLast(1).once("value", (snapshot) => {
   let lastKey = null;
 
@@ -34,7 +38,6 @@ ref.limitToLast(1).once("value", (snapshot) => {
     lastKey = child.key;
   });
 
-  // listen only for new data
   ref.orderByKey().startAfter(lastKey).on("child_added", (snapshot) => {
     latestData = snapshot.val();
 
@@ -44,7 +47,6 @@ ref.limitToLast(1).once("value", (snapshot) => {
   });
 });
 
-// API endpoint
 app.get("/api", (req, res) => {
   res.json({
     status: "success",
@@ -52,7 +54,6 @@ app.get("/api", (req, res) => {
   });
 });
 
-// start server
 app.listen(PORT, () => {
   console.log(`API running on http://localhost:${PORT}/api`);
 });
